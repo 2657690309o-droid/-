@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙 睡眠记录 · 可编辑</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background: #0b0e14;
+            color: #e0e4ec;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-align: center;
+            color: #a3b3cc;
+            margin-top: 10px;
+        }
+        .card {
+            background: #161c26;
+            border-radius: 32px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3344;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .status-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            background: #2a3344;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 14px;
+            color: #8899bb;
+        }
+        .status-badge.active {
+            background: #1e3a3a;
+            color: #6fcf97;
+            border: 1px solid #2d9b5e;
+        }
+        .btn-main {
+            width: 100%;
+            padding: 28px 0;
+            border: none;
+            border-radius: 60px;
+            font-size: 28px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #2a3a5a;
+            color: #8899bb;
+            letter-spacing: 4px;
+            box-shadow: 0 4px 0 #0f151f;
+        }
+        .btn-main.sleep {
+            background: #3a5a8a;
+            color: white;
+            box-shadow: 0 4px 0 #1a2a4a;
+        }
+        .btn-main.wake {
+            background: #e6a84c;
+            color: #1a1a1a;
+            box-shadow: 0 4px 0 #8a6420;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            background: #0f151f;
+            border-radius: 16px;
+            padding: 12px 0;
+            text-align: center;
+        }
+        .stat-num {
+            font-size: 22px;
+            font-weight: 600;
+            color: #dce4f0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #667999;
+            margin-top: 4px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0 16px 0;
+        }
+        .month-nav button {
+            background: #2a3344;
+            border: none;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .day-label {
+            text-align: center;
+            font-size: 12px;
+            color: #556688;
+            font-weight: 600;
+            padding: 6px 0;
+        }
+        .day-cell {
+            aspect-ratio: 1 / 1;
+            background: #0f151f;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #aabbdd;
+            cursor: pointer;
+            transition: 0.15s;
+            position: relative;
+        }
+        .day-cell:active { transform: scale(0.92); }
+        .day-cell.today { border: 2px solid #4a7a9a; }
+        .day-cell.future { opacity: 0.25; pointer-events: none; }
+        .day-cell .sleep-time {
+            font-size: 10px;
+            font-weight: 600;
+            color: #b8d4e3;
+            background: #1a2a3a;
+            padding: 0 4px;
+            border-radius: 6px;
+            margin-top: 2px;
+        }
+        .day-cell .day-number { font-size: 15px; line-height: 1.2; }
+        .day-cell .duration-dot { font-size: 8px; color: #6fcf97; }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .btn-group button {
+            flex: 1;
+            min-width: 80px;
+            background: #2a3344;
+            border: none;
+            color: #aabbdd;
+            padding: 10px 0;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-group button:hover { background: #3a4a5a; color: white; }
+        .btn-group .danger { color: #cc7755; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #334455; }
+        #fileInput { display: none; }
+
+        /* ---- 模态框 ---- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: #1a2230;
+            border-radius: 32px;
+            padding: 28px 24px;
+            max-width: 380px;
+            width: 90%;
+            border: 1px solid #3a4a5a;
+        }
+        .modal-box h2 {
+            margin: 0 0 12px 0;
+            font-weight: 300;
+            color: #b8cce0;
+        }
+        .modal-box .date-label {
+            color: #667999;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .modal-field {
+            margin: 12px 0;
+        }
+        .modal-field label {
+            display: block;
+            color: #8899bb;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .modal-field input {
+            width: 100%;
+            padding: 12px;
+            background: #0f151f;
+            border: 1px solid #2a3344;
+            border-radius: 16px;
+            color: #e0e4ec;
+            font-size: 18px;
+        }
+        .modal-field input:focus {
+            outline: none;
+            border-color: #4a7a9a;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .modal-actions button {
+            flex: 1;
+            padding: 14px 0;
+            border: none;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .modal-actions .save-btn {
+            background: #3a7a5a;
+            color: white;
+        }
+        .modal-actions .save-btn:active { background: #2a5a4a; }
+        .modal-actions .del-btn {
+            background: #5a2a2a;
+            color: #dd9988;
+        }
+        .modal-actions .del-btn:active { background: #4a1a1a; }
+        .modal-actions .cancel-btn {
+            background: #2a3344;
+            color: #8899bb;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🌙 睡 眠 日 记</h1>
+
+    <div class="card">
+        <div class="status-area">
+            <span class="status-badge" id="statusBadge">💤 等待</span>
+            <span id="todayDate" style="color:#667999; font-size:14px;"></span>
+        </div>
+        <button class="btn-main" id="mainBtn">🛏 开始睡觉</button>
+    </div>
+
+    <div class="card">
+        <div class="stats-grid">
+            <div class="stat-item"><div class="stat-num" id="avgSleep">--</div><div class="stat-label">本周平均时长</div></div>
+            <div class="stat-item"><div class="stat-num" id="totalRecords">0</div><div class="stat-label">共记录天数</div></div>
+            <div class="stat-item"><div class="stat-num" id="latestTime">--</div><div class="stat-label">本周平均入睡时间</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="calendar-header">
+            <span style="font-weight:600; color:#dce4f0;" id="monthYearDisplay">2026年1月</span>
+            <div class="month-nav">
+                <button id="prevMonth">◀</button>
+                <button id="nextMonth">▶</button>
+            </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div style="text-align:center; margin-top:12px; font-size:12px; color:#445566;">
+            👆 点击任意日期可修改入睡/醒来时间
+        </div>
+        <div class="btn-group">
+            <button id="exportBtn">📤 导出备份</button>
+            <button id="importBtn">📥 导入备份</button>
+            <button id="clearDataBtn" class="danger">🗑️ 清除</button>
+        </div>
+        <input type="file" id="fileInput" accept=".json">
+    </div>
+    <div class="footer">数据存本地 · 点击日期可编辑 ✏️</div>
+</div>
+
+<!-- 编辑模态框 -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <h2 id="editDateTitle">📅 2026-08-15</h2>
+        <div class="date-label" id="editStatusHint">当前记录</div>
+        <div class="modal-field">
+            <label>🛏 入睡时间</label>
+            <input type="time" id="editStartTime" step="60">
+        </div>
+        <div class="modal-field">
+            <label>🌅 醒来时间（留空表示未醒）</label>
+            <input type="time" id="editEndTime" step="60">
+        </div>
+        <div class="modal-actions">
+            <button class="save-btn" id="editSaveBtn">💾 保存修改</button>
+            <button class="del-btn" id="editDeleteBtn">🗑️ 删除这天</button>
+            <button class="cancel-btn" id="editCancelBtn">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ----- 核心逻辑 -----
+    const STORAGE_KEY = 'sleep_records';
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    let currentSleepDate = null;
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+
+    // 编辑模态框的当前日期
+    let editingDate = null;
+
+    const mainBtn = document.getElementById('mainBtn');
+    const statusBadge = document.getElementById('statusBadge');
+    const todayDateEl = document.getElementById('todayDate');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const monthYearDisplay = document.getElementById('monthYearDisplay');
+    const avgSleepEl = document.getElementById('avgSleep');
+    const totalRecordsEl = document.getElementById('totalRecords');
+    const latestTimeEl = document.getElementById('latestTime');
+
+    // 模态框元素
+    const editModal = document.getElementById('editModal');
+    const editDateTitle = document.getElementById('editDateTitle');
+    const editStatusHint = document.getElementById('editStatusHint');
+    const editStartTime = document.getElementById('editStartTime');
+    const editEndTime = document.getElementById('editEndTime');
+    const editSaveBtn = document.getElementById('editSaveBtn');
+    const editDeleteBtn = document.getElementById('editDeleteBtn');
+    const editCancelBtn = document.getElementById('editCancelBtn');
+
+    // ----- 辅助函数 -----
+    function getTodayStr() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function formatDateDisplay(dateStr) {
+        const parts = dateStr.split('-');
+        return parts[0] + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+    }
+
+    function formatTime(timestamp) {
+        if (!timestamp) return '';
+        const d = new Date(timestamp);
+        return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+
+    function formatDuration(minutes) {
+        if (!minutes) return '--';
+        const h = Math.floor(minutes / 60);
+        const m = Math.round(minutes % 60);
+        if (h === 0) return m + '分钟';
+        return h + '小时' + (m > 0 ? m + '分钟' : '');
+    }
+
+    // 根据日期字符串和时间字符串（HH:MM）生成时间戳（本地时间）
+    function getTimestampFromDateAndTime(dateStr, timeStr) {
+        if (!timeStr) return null;
+        const parts = dateStr.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+        const day = parseInt(parts[2]);
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const d = new Date(year, month, day, hours, minutes);
+        return d.getTime();
+    }
+
+    // 检查是否有进行中的睡眠
+    function checkOngoingSleep() {
+        const today = getTodayStr();
+        const keys = Object.keys(records);
+        for (let key of keys) {
+            if (records[key].start && !records[key].end) {
+                currentSleepDate = key;
+                updateUIForSleeping();
+                return true;
+            }
+        }
+        if (records[today] && records[today].start && !records[today].end) {
+            currentSleepDate = today;
+            updateUIForSleeping();
+            return true;
+        }
+        return false;
+    }
+
+    function updateUIForSleeping() {
+        statusBadge.textContent = '😴 睡眠中...';
+        statusBadge.className = 'status-badge active';
+        mainBtn.textContent = '🌅 醒来！';
+        mainBtn.className = 'btn-main wake';
+    }
+
+    function updateUIForAwake() {
+        statusBadge.textContent = '☀️ 清醒中';
+        statusBadge.className = 'status-badge';
+        mainBtn.textContent = '🛏 开始睡觉';
+        mainBtn.className = 'btn-main sleep';
+    }
+
+    // ----- 开始/结束睡眠（不变）-----
+    function startSleep() {
+        const today = getTodayStr();
+        if (records[today] && records[today].start && !records[today].end) {
+            alert('你已经点击了“开始睡觉”，还没醒来呢！点“醒来”结束吧。');
+            return;
+        }
+        if (records[today] && records[today].end) {
+            if (!confirm('今天已经记录过一次睡眠了，重新开始会覆盖今天的记录。确定吗？')) return;
+        }
+        const now = Date.now();
+        records[today] = { start: now, end: null, duration: null };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        currentSleepDate = today;
+        updateUIForSleeping();
+        renderCalendar(currentYear, currentMonth);
+        updateStats();
+        alert('🛏 晚安！明天醒来记得点击“醒来”按钮哦。');
+    }
+
+    function endSleep() {
+        const today = getTodayStr();
+        let targetDate = currentSleepDate;
+        if (!targetDate || !records[targetDate]) {
+            if (records[today] && records[today].start && !records[today].end) targetDate = today;
+            else {
+                alert('没有找到进行中的睡眠记录，请先点击“开始睡觉”吧。');
+                return;
+            }
+        }
+        const record = records[targetDate];
+        if (!record || !record.start) { alert('数据异常'); return; }
+        if (record.end) {
+            alert('这条记录已经结束啦！');
+            currentSleepDate = null;
+            updateUIForAwake();
+            renderCalendar(currentYear, currentMonth);
+            updateStats();
+            return;
+        }
+        const now = Date.now();
+        const durationMin = (now - record.start) / (1000 * 60);
+        if (durationMin < 10) {
+            if (!confirm('你只睡了 ' + Math.round(durationMin) + ' 分钟，确定要记录吗？（可能是误触）')) return;
+        }
+        record.end = now;
+        record.duration = durationMin;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        currentSleepDate = null;
+        updateUIForAwake();
+        renderCalendar(currentYear, currentMonth);
+        updateStats();
+        const h = Math.floor(durationMin / 60);
+        const m = Math.round(durationMin % 60);
+        alert('🌅 早上好！你睡了 ' + h + '小时' + m + '分钟。');
+    }
+
+    // ----- 渲染日历 -----
+    function renderCalendar(year, month) {
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = getTodayStr();
+        monthYearDisplay.textContent = year + '年' + (month+1) + '月';
+        let html = '';
+        const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
+        for (let w of weekDays) html += `<div class="day-label">${w}</div>`;
+        let startOffset = (firstDay === 0) ? 6 : firstDay - 1;
+        for (let i = 0; i < startOffset; i++) html += `<div class="day-cell" style="background:transparent; cursor:default;"></div>`;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+            const isToday = (dateStr === today);
+            const isFuture = (dateStr > today);
+            let sleepTimeText = '', durationText = '';
+            let cellClass = 'day-cell';
+            if (isToday) cellClass += ' today';
+            if (isFuture) cellClass += ' future';
+            if (records[dateStr] && records[dateStr].start) {
+                sleepTimeText = formatTime(records[dateStr].start);
+                if (records[dateStr].duration) {
+                    const mins = Math.round(records[dateStr].duration);
+                    durationText = (mins >= 60) ? Math.floor(mins/60)+'h' : mins+'m';
+                } else if (records[dateStr].start && !records[dateStr].end) {
+                    durationText = '💤';
+                }
+            }
+            // 点击事件：如果不是未来日期，可编辑
+            const clickAttr = isFuture ? '' : ` onclick="openEditModal('${dateStr}')"`;
+            html += `<div class="${cellClass}"${clickAttr}>
+                        <div class="day-number">${d}</div>
+                        ${sleepTimeText ? `<div class="sleep-time">${sleepTimeText}</div>` : ''}
+                        ${durationText ? `<div class="duration-dot">${durationText}</div>` : ''}
+                    </div>`;
+        }
+        calendarGrid.innerHTML = html;
+    }
+
+    // ----- 更新统计 -----
+    function updateStats() {
+        const today = getTodayStr();
+        const dates = Object.keys(records).filter(k => records[k].duration !== null && records[k].duration > 0);
+        const total = dates.length;
+        const now = new Date();
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().split('T')[0];
+        let weekDurations = [], weekStartTimes = [];
+        dates.forEach(dateStr => {
+            if (dateStr >= weekAgoStr && dateStr <= today) {
+                if (records[dateStr].duration) weekDurations.push(records[dateStr].duration);
+                if (records[dateStr].start) weekStartTimes.push(new Date(records[dateStr].start).getHours() * 60 + new Date(records[dateStr].start).getMinutes());
+            }
+        });
+        avgSleepEl.textContent = (weekDurations.length > 0) ? formatDuration(weekDurations.reduce((a,b)=>a+b,0)/weekDurations.length) : '--';
+        totalRecordsEl.textContent = total;
+        if (weekStartTimes.length > 0) {
+            const avgMinutes = weekStartTimes.reduce((a,b)=>a+b,0) / weekStartTimes.length;
+            const h = Math.floor(avgMinutes / 60);
+            const m = Math.round(avgMinutes % 60);
+            latestTimeEl.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+        } else {
+            latestTimeEl.textContent = '--';
+        }
+        todayDateEl.textContent = formatDateDisplay(today);
+    }
+
+    // ----- 编辑模态框 -----
+    function openEditModal(dateStr) {
+        editingDate = dateStr;
+        const record = records[dateStr] || {};
+        editDateTitle.textContent = '📅 ' + formatDateDisplay(dateStr);
+        if (record.start && record.end) {
+            editStatusHint.textContent = '✅ 已有完整记录，可修改时间';
+        } else if (record.start && !record.end) {
+            editStatusHint.textContent = '💤 未醒（可设置醒来时间）';
+        } else {
+            editStatusHint.textContent = '✏️ 添加入睡和醒来时间';
+        }
+        editStartTime.value = record.start ? formatTime(record.start) : '';
+        editEndTime.value = record.end ? formatTime(record.end) : '';
+        editModal.classList.add('active');
+    }
+
+    function closeEditModal() {
+        editModal.classList.remove('active');
+        editingDate = null;
+    }
+
+    // 保存修改
+    function saveEdit() {
+        if (!editingDate) return;
+        const startTimeStr = editStartTime.value;
+        const endTimeStr = editEndTime.value;
+
+        // 至少要有入睡时间
+        if (!startTimeStr) {
+            alert('请填写入睡时间。');
+            return;
+        }
+
+        // 构建时间戳
+        const startTs = getTimestampFromDateAndTime(editingDate, startTimeStr);
+        if (startTs === null) { alert('入睡时间无效'); return; }
+
+        let endTs = null;
+        let duration = null;
+
+        if (endTimeStr) {
+            endTs = getTimestampFromDateAndTime(editingDate, endTimeStr);
+            if (endTs === null) { alert('醒来时间无效'); return; }
+            // 如果醒来时间小于入睡时间，说明跨天，加一天
+            if (endTs <= startTs) {
+                const parts = editingDate.split('-');
+                const nextDay = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]) + 1);
+                // 重新计算 endTs 用第二天的日期
+                const [h, m] = endTimeStr.split(':').map(Number);
+                const d2 = new Date(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), h, m);
+                endTs = d2.getTime();
+            }
+            duration = (endTs - startTs) / (1000 * 60);
+            if (duration < 1) {
+                alert('睡眠时间太短（小于1分钟），请检查时间。');
+                return;
+            }
+        }
+
+        // 更新记录
+        records[editingDate] = {
+            start: startTs,
+            end: endTs,
+            duration: duration
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+
+        // 如果当前正在睡眠且编辑的是今天，更新状态
+        if (editingDate === getTodayStr() && !endTs) {
+            // 变为睡眠中
+            currentSleepDate = editingDate;
+            updateUIForSleeping();
+        } else if (editingDate === getTodayStr() && endTs) {
+            // 变为清醒
+            currentSleepDate = null;
+            updateUIForAwake();
+        }
+
+        closeEditModal();
+        renderCalendar(currentYear, currentMonth);
+        updateStats();
+        alert('✅ 修改已保存！');
+    }
+
+    // 删除这天记录
+    function deleteRecord() {
+        if (!editingDate) return;
+        if (!confirm('确定要删除 ' + formatDateDisplay(editingDate) + ' 的睡眠记录吗？')) return;
+        delete records[editingDate];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+        if (editingDate === getTodayStr()) {
+            currentSleepDate = null;
+            updateUIForAwake();
+        }
+        closeEditModal();
+        renderCalendar(currentYear, currentMonth);
+        updateStats();
+        alert('已删除该日记录。');
+    }
+
+    // ----- 备份功能 -----
+    function exportBackup() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (!data) { alert('没有数据可备份'); return; }
+        const blob = new Blob([data], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        a.download = `睡眠备份_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('✅ 备份下载成功！');
+    }
+
+    function importBackup(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (typeof imported !== 'object') throw new Error('格式错误');
+                const count = Object.keys(imported).length;
+                if (confirm(`找到 ${count} 条记录，确定覆盖当前数据吗？（建议先导出当前数据）`)) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+                    records = imported;
+                    checkOngoingSleep();
+                    renderCalendar(currentYear, currentMonth);
+                    updateStats();
+                    alert('✅ 数据恢复成功！');
+                }
+            } catch(err) {
+                alert('❌ 文件格式有误，请选择正确的备份文件。');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function clearData() {
+        if (confirm('⚠️ 确定清除所有数据？（建议先导出备份）')) {
+            if (confirm('再次确认：全部删除？')) {
+                records = {};
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+                currentSleepDate = null;
+                updateUIForAwake();
+                renderCalendar(currentYear, currentMonth);
+                updateStats();
+                alert('已清除所有数据。');
+            }
+        }
+    }
+
+    function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        renderCalendar(currentYear, currentMonth);
+    }
+
+    // ----- 初始化 -----
+    function init() {
+        const hasOngoing = checkOngoingSleep();
+        if (!hasOngoing) updateUIForAwake();
+        const today = new Date();
+        currentYear = today.getFullYear();
+        currentMonth = today.getMonth();
+        renderCalendar(currentYear, currentMonth);
+        updateStats();
+
+        mainBtn.addEventListener('click', function() {
+            if (mainBtn.textContent.includes('醒来')) endSleep();
+            else startSleep();
+        });
+
+        document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
+        document.getElementById('clearDataBtn').addEventListener('click', clearData);
+        document.getElementById('exportBtn').addEventListener('click', exportBackup);
+        document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                importBackup(this.files[0]);
+                this.value = '';
+            }
+        });
+
+        // 模态框按钮事件
+        editSaveBtn.addEventListener('click', saveEdit);
+        editDeleteBtn.addEventListener('click', deleteRecord);
+        editCancelBtn.addEventListener('click', closeEditModal);
+        // 点击背景关闭
+        editModal.addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+    }
+
+    // 让 openEditModal 全局可用（因为 onclick 调用）
+    window.openEditModal = openEditModal;
+
+    init();
+</script>
+</body>
+</html>
